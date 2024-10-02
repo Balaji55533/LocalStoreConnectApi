@@ -104,7 +104,7 @@ const loginBusinessOwner = asyncHandler(async (req, res) => {
 
         // Return user data along with the token
         res.status(200).json({
-            data: user.toUserResponse(),
+            user: user.toUserResponse(),
         });
     } catch (error) {
         console.error(error);
