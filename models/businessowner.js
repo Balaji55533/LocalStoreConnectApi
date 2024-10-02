@@ -17,7 +17,7 @@ const businessOwner = new mongoose.Schema({
         type: String,
         lowercase: true,
         unique: true,
-        match: [/\S+@\S+\.\S+/, 'is invalid'],
+        match: [/\S+@\S+\.\S+/, 'is invalid'], 
         index: true,
         required: function() {
             return !this.phoneNumber;  // If email is not provided, phoneNumber is required
