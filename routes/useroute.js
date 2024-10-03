@@ -8,7 +8,9 @@ const verifyJWT = require('../middleware/verifyJWT');
 // router.post('/users/login', userController.userLogin);
 // Registration
 router.post('/users', userController.registerUser);
-
+router.get('/', (req, res) => {
+    res.send('Hello World!');
+  });
 
 // Get Current User
 // router.get('/user', verifyJWT, userController.getCurrentUser);
