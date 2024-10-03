@@ -3,11 +3,11 @@ const uniqueValidator = require('mongoose-unique-validator');
 const jwt = require("jsonwebtoken");
 
 const businessOwner = new mongoose.Schema({
-    username: {
-        type: String,
+    username: {   
+        type: String, 
         required: true,
-        unique: true,
-        lowercase: true
+        unique: true, 
+        lowercase: true 
     },
     password: {
         type: String,
