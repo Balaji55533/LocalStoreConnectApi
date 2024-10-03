@@ -2,7 +2,7 @@
 const asyncHandler = require('express-async-handler');
 const bcrypt = require('bcrypt');
 const User = require('../models/user');
-
+ 
 
 const AdPost = asyncHandler(async (req, res) => {
     const { postData } = req.body;
