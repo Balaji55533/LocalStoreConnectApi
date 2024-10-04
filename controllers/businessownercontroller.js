@@ -52,6 +52,21 @@ const registerBusinessOwner = asyncHandler(async (req, res) => {
             });
         }
     } catch (error) {
+
+        if (error.name === 'ValidationError') {
+            const errors = Object.keys(error.errors).map(key => {
+                return {
+                    field: key,
+                    message: error.errors[key].message
+                };
+            });
+    
+            return res.status(400).json({ 
+                message: "Validation error", 
+                errors 
+            });
+        }
+    
         // Handle duplicate key error (MongoError code 11000)
         if (error.code === 11000) {
             const duplicateField = Object.keys(error.keyValue).find(key => error.keyValue[key]);
@@ -72,7 +87,7 @@ const registerBusinessOwner = asyncHandler(async (req, res) => {
         }
         
         // Handle other errors
-        res.status(500).json({ message: "An error occurred during registration" });
+        res.status(500).json({ message: "An error occurred during registration",error });
     }
 });
 
