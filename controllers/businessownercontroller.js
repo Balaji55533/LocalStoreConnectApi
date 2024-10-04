@@ -54,13 +54,20 @@ const registerBusinessOwner = asyncHandler(async (req, res) => {
     } catch (error) {
         // Handle duplicate key error (MongoError code 11000)
         if (error.code === 11000) {
-            const duplicateField = Object.keys(error.keyValue)[0];
-            const errorMessage = duplicateField === 'username' 
-                ? "Username already exists"
-                : duplicateField === 'email'
-                    ? "Email already exists"
-                    : "Phone number already exists";
-            
+            const duplicateField = Object.keys(error.keyValue).find(key => error.keyValue[key]);
+        
+            let errorMessage;
+        
+            if (duplicateField === 'username') {
+                errorMessage = "Username already exists";
+            } else if (duplicateField === 'email') {
+                errorMessage = "Email already exists";
+            } else if (duplicateField === 'phoneNumber') {
+                errorMessage = "Phone number already exists";
+            } else {
+                errorMessage = error.keyValue;
+            }
+        
             return res.status(409).json({ message: errorMessage });
         }
         

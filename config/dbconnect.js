@@ -2,11 +2,11 @@ const mongoose = require("mongoose");
 const dotenv = require("dotenv");
 dotenv.config();
 
-// Ensure the MONGODB_URL environment variable is set
+// Ensure the MONGODB_URL environment variable is set 
 if (!process.env.DATABASE_URI) {
   console.error("Missing MongoDB connection string in .env file");
   process.exit(1); // Exit the application if the MongoDB connection string is not provided
-}
+} 
 
 const connectToDatabase = async () => { 
   try {
