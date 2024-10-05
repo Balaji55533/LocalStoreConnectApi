@@ -3,7 +3,7 @@ const asyncHandler = require('express-async-handler');
 const bcrypt = require('bcrypt');
 const businessowner = require('../models/businessowner');
 const registerBusinessOwner = asyncHandler(async (req, res) => {
-    const  {user}  = req.body;
+    const  { user }  = req.body;
     // Confirm required data
     if (!user || !user.username || !user.password) {
         return res.status(400).json({ message: "Username and password are required" });
