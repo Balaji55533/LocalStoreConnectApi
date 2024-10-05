@@ -3,8 +3,7 @@ const asyncHandler = require('express-async-handler');
 const bcrypt = require('bcrypt');
 const businessowner = require('../models/businessowner');
 const registerBusinessOwner = asyncHandler(async (req, res) => {
-    const { user } = req.body;
-
+    const  {user}  = req.body;
     // Confirm required data
     if (!user || !user.username || !user.password) {
         return res.status(400).json({ message: "Username and password are required" });
@@ -14,7 +13,7 @@ const registerBusinessOwner = asyncHandler(async (req, res) => {
         // Hash password
         const hashedPwd = await bcrypt.hash(user.password, 10); // salt rounds
 
-        // Build user object, conditionally adding fields
+        // Build user object, conditional ly adding fields
         const userObject = {
             username: user.username,
             password: hashedPwd,
@@ -39,7 +38,7 @@ const registerBusinessOwner = asyncHandler(async (req, res) => {
 
         // Create user
         const createdUser = await businessowner.create(userObject);
-
+        
         if (createdUser) {
             res.status(201).json({
                 user: createdUser.toUserResponse()
@@ -60,9 +59,8 @@ const registerBusinessOwner = asyncHandler(async (req, res) => {
                     message: error.errors[key].message
                 };
             });
-    
             return res.status(400).json({ 
-                message: "Validation error", 
+                message: JSON.stringify(errors), 
                 errors 
             });
         }
