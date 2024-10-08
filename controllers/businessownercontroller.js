@@ -2,8 +2,20 @@
 const asyncHandler = require('express-async-handler');
 const bcrypt = require('bcrypt');
 const businessowner = require('../models/businessowner');
+const NodeCache = require("node-cache");
+const AWS = require('aws-sdk');
+// Create a cache instance with a default TTL of 10 minutes
+const userCache = new NodeCache({ stdTTL: 600 });
+
+
+const s3 = new AWS.S3({
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    region: process.env.AWS_REGION,
+});
 const registerBusinessOwner = asyncHandler(async (req, res) => {
-    const  { user }  = req.body;
+    const { user } = req.body;
+
     // Confirm required data
     if (!user || !user.username || !user.password) {
         return res.status(400).json({ message: "Username and password are required" });
@@ -13,82 +25,90 @@ const registerBusinessOwner = asyncHandler(async (req, res) => {
         // Hash password
         const hashedPwd = await bcrypt.hash(user.password, 10); // salt rounds
 
-        // Build user object, conditional ly adding fields
+        // Build user object with optional fields
         const userObject = {
             username: user.username,
             password: hashedPwd,
+            ...user.email && { email: user.email },
+            ...user.phoneNumber && { phoneNumber: user.phoneNumber },
+            ...user.address && { address: user.address },
+            ...user.gstnNumber && { gstnNumber: user.gstnNumber },
+            ...user.businessName && { businessName: user.businessName },
+            ...user.businessType && { 
+                businessType: { 
+                    type: user.businessType.type,
+                } 
+            },
+            ...user.description && { description: user.description },
+            ...user.city && { city: user.city },
+            ...user.state && { state: user.state },
+            ...user.zipCode && { zipCode: user.zipCode },
+            ...user.country && { country: user.country },
+            ...user.openingTime && { openingTime: user.openingTime },
+            ...user.closingTime && { closingTime: user.closingTime },
+            ...user.bookingDuration && { bookingDuration: user.bookingDuration },
+            ...user.maxBookings && { maxBookings: user.maxBookings },
+            ...user.cancellationPolicy && { cancellationPolicy: user.cancellationPolicy },
+            ...user.website && { website: user.website },
+            ...user.socialMediaLinks && { socialMediaLinks: user.socialMediaLinks },
+            ...user.profilePicture && { profilePicture: user.profilePicture },
         };
 
-        // Add optional fields if provided
-        if (user.email) {
-            userObject.email = user.email;
-        }
+        if (user.profilePicture) {
+            const fileContent = Buffer.from(user.profilePicture.data, 'base64'); 
+            const params = {
+                Bucket: process.env.AWS_BUCKET_NAME,
+                Key: `profile-pictures/${user.username}-${Date.now()}`, 
+                Body: fileContent,
+                ContentType: user.profilePicture.mimetype,
+                ACL: 'public-read', 
+            };
 
-        if (user.phoneNumber) {
-            userObject.phoneNumber = user.phoneNumber;
-        }
-
-        if (user.address) {
-            userObject.address = user.address;
-        }
-
-        if (user.gstnNumber) {
-            userObject.gstnNumber = user.gstnNumber;
+            const s3Response = await s3.upload(params).promise();
+            userObject.profilePicture = s3Response.Location; // Save the S3 file URL in the user object
         }
 
         // Create user
         const createdUser = await businessowner.create(userObject);
-        
-        if (createdUser) {
-            res.status(201).json({
-                user: createdUser.toUserResponse()
-            });
-        } else {
-            res.status(422).json({
-                errors: {
-                    body: "Unable to register a user"
-                }
-            });
-        }
-    } catch (error) {
 
-        if (error.name === 'ValidationError') {
-            const errors = Object.keys(error.errors).map(key => {
-                return {
-                    field: key,
-                    message: error.errors[key].message
-                };
-            });
-            return res.status(400).json({ 
-                message: JSON.stringify(errors), 
-                errors 
+        if (createdUser) {
+            // Check if createdUser is valid and has the method
+            console.log("User Document:", createdUser);
+            return res.status(201).json({
+                user: createdUser.toUserResponse ? createdUser.toUserResponse() : createdUser,
+                message: "User registered successfully."
             });
         }
-    
+
+    } catch (error) {
+        // Handle validation error
+        if (error.name === 'ValidationError') {
+            const errors = Object.keys(error.errors).map(key => ({
+                field: key,
+                message: error.errors[key].message
+            }));
+            return res.status(400).json({
+                message: "Validation errors occurred.",
+                errors
+            });
+        }
+
         // Handle duplicate key error (MongoError code 11000)
         if (error.code === 11000) {
             const duplicateField = Object.keys(error.keyValue).find(key => error.keyValue[key]);
-        
-            let errorMessage;
-        
-            if (duplicateField === 'username') {
-                errorMessage = "Username already exists";
-            } else if (duplicateField === 'email') {
-                errorMessage = "Email already exists";
-            } else if (duplicateField === 'phoneNumber') {
-                errorMessage = "Phone number already exists";
-            } else {
-                errorMessage = error.keyValue;
-            }
-        
+            const errorMessage = {
+                username: "Username already exists",
+                email: "Email already exists",
+                phoneNumber: "Phone number already exists",
+            }[duplicateField] || "Duplicate key error";
+
             return res.status(409).json({ message: errorMessage });
         }
-        
+
         // Handle other errors
-        res.status(500).json({ message: "An error occurred during registration",error });
+        return res.status(500).json({ message: "An error occurred during registration", error });
     }
 });
-
 
 const loginBusinessOwner = asyncHandler(async (req, res) => {
     const { usernameOrEmailOrPhone, password } = req.body;
@@ -99,18 +119,30 @@ const loginBusinessOwner = asyncHandler(async (req, res) => {
     }
 
     try {
-        // Find the user by username, email, or phone number
-        const user = await businessowner.findOne({
-            $or: [
-                { username: usernameOrEmailOrPhone },
-                { email: usernameOrEmailOrPhone },
-                { phoneNumber: usernameOrEmailOrPhone }
-            ]
-        });
+        // Check the cache for the user
+        const cachedUser = userCache.get(usernameOrEmailOrPhone);
+        
+        // If the user is in the cache, use it
+        let user;
+        if (cachedUser) {
+            user = cachedUser;
+        } else {
+            // Find the user by username, email, or phone number
+            user = await businessowner.findOne({
+                $or: [
+                    { username: usernameOrEmailOrPhone },
+                    { email: usernameOrEmailOrPhone },
+                    { phoneNumber: usernameOrEmailOrPhone }
+                ]
+            });
 
-        // Check if the user exists
-        if (!user) {
-            return res.status(401).json({ message: "Invalid credentials" });
+            // Check if the user exists
+            if (!user) {
+                return res.status(401).json({ message: "Invalid credentials" });
+            }
+
+            // Cache the user for future requests (Mongoose document)
+            userCache.set(usernameOrEmailOrPhone, user);
         }
 
         // Validate the password
@@ -125,12 +157,15 @@ const loginBusinessOwner = asyncHandler(async (req, res) => {
         // Return user data along with the token
         res.status(200).json({
             user: user.toUserResponse(),
+            token // Include the token in the response
         });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: "An error occurred during login" });
     }
 });
+
+
 
 
 
