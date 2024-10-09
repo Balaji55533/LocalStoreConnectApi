@@ -6,13 +6,13 @@ const NodeCache = require("node-cache");
 const AWS = require('aws-sdk');
 // Create a cache instance with a default TTL of 10 minutes
 const userCache = new NodeCache({ stdTTL: 600 });
-
-
+const multer = require('multer');
 const s3 = new AWS.S3({
     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-    region: process.env.AWS_REGION,
+    region: "ap-south-1",
 });
+
 const registerBusinessOwner = asyncHandler(async (req, res) => {
     const { user } = req.body;
 
@@ -51,29 +51,15 @@ const registerBusinessOwner = asyncHandler(async (req, res) => {
             ...user.cancellationPolicy && { cancellationPolicy: user.cancellationPolicy },
             ...user.website && { website: user.website },
             ...user.socialMediaLinks && { socialMediaLinks: user.socialMediaLinks },
-            ...user.profilePicture && { profilePicture: user.profilePicture },
         };
 
-        if (user.profilePicture) {
-            const fileContent = Buffer.from(user.profilePicture.data, 'base64'); 
-            const params = {
-                Bucket: process.env.AWS_BUCKET_NAME,
-                Key: `profile-pictures/${user.username}-${Date.now()}`, 
-                Body: fileContent,
-                ContentType: user.profilePicture.mimetype,
-                ACL: 'public-read', 
-            };
-
-            const s3Response = await s3.upload(params).promise();
-            userObject.profilePicture = s3Response.Location; // Save the S3 file URL in the user object
-        }
-
+     
+ 
         // Create user
         const createdUser = await businessowner.create(userObject);
 
         if (createdUser) {
             // Check if createdUser is valid and has the method
-            console.log("User Document:", createdUser);
             return res.status(201).json({
                 user: createdUser.toUserResponse ? createdUser.toUserResponse() : createdUser,
                 message: "User registered successfully."
@@ -165,13 +151,63 @@ const loginBusinessOwner = asyncHandler(async (req, res) => {
     }
 });
 
+const uploadUserFile = asyncHandler(async (req, res) => {
+    const { userId } = req.body;
+    const file = req.file;
+    // Check if userId and file are present
+    if (!userId || !file) {
+        console.log("Missing userId or file");
+        return res.status(400).json({ message: "User ID and file are required." });
+    }
 
+    try {
+        // Find the user in the database
+        const user = await businessowner.findById(userId);
+        if (!user) {
+            console.log("User not found:", userId);
+            return res.status(404).json({ message: "User not found." });
+        }
 
+        // Prepare file for upload
+        const fileContent = file.buffer;
+        const fileExtension = file.originalname.split('.').pop();
+        const key = `user-files/${userId}-${Date.now()}.${fileExtension}`;
+        
+        const params = {
+            Bucket: process.env.AWS_BUCKET_NAME,
+            Key: key,
+            Body: fileContent,
+            ContentType: file.mimetype,
+            ACL: 'public-read', 
+        };
 
+       
+
+        // Upload to S3
+        const s3Response = await s3.upload(params).promise();
+
+        // Update the user with the file URL
+        user.profilePicture = s3Response.Location;
+        await user.save();
+
+        return res.status(200).json({
+            message: "File uploaded successfully.",
+            fileUrl: s3Response.Location
+        });
+    } catch (error) {
+        console.error('Error uploading file:', error);
+        return res.status(500).json({ 
+            message: "An error occurred while uploading the file.",
+            error: error.message,
+            stack: error.stack
+        });
+    }
+});
 
 module.exports = {
     registerBusinessOwner, 
-    loginBusinessOwner
+    loginBusinessOwner,
+    uploadUserFile
     
 }
  

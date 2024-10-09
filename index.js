@@ -1,9 +1,8 @@
-require('dotenv').config();
+require('dotenv').config({path:__dirname+'./.env'});
 const express = require('express');
 const app = express();
 const PORT = process.env.PORT || 5000;
 const cors = require('cors');
-const mongoose = require('mongoose');  
 require("./config/dbconnect")
 const router = express.Router();
  

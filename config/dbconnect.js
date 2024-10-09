@@ -2,6 +2,9 @@ const mongoose = require("mongoose");
 const dotenv = require("dotenv");
 dotenv.config();
 
+
+const mongoUri = process.env.DATABASE_URI;
+console.log("mongoUri",mongoUri);
 // Ensure the MONGODB_URL environment variable is set 
 if (!process.env.DATABASE_URI) {
   console.error("Missing MongoDB connection string in .env file");
@@ -11,7 +14,7 @@ if (!process.env.DATABASE_URI) {
 const connectToDatabase = async () => { 
   try {
     mongoose.set('strictQuery', false);
-    await mongoose.connect(process.env.DATABASE_URI, {
+    await mongoose.connect("mongodb+srv://balajidevtar:0JyOgsoj7GSjqfmc@serverlessinstance0.bzamshj.mongodb.net/LocalShopConnectApi?retryWrites=true&w=majority&appName=LocalShopConnectApi", {
       useNewUrlParser: true,
       useUnifiedTopology: true,
       family: 4,
@@ -20,7 +23,7 @@ const connectToDatabase = async () => {
         j: true, // (optional) If you want the write to be journaled
         wtimeout: 1000, // (optional) Timeout for write concern acknowledgment
       }, 
-    });
+    }); 
 
     console.log("Connection successful");
   } catch (err) {

@@ -3,7 +3,7 @@ const uniqueValidator = require('mongoose-unique-validator');
 const jwt = require("jsonwebtoken");
 
 const businessTypeSchema = new mongoose.Schema({
-    id: {
+    id: { 
         type: mongoose.Schema.Types.ObjectId, // Unique identifier
         default: () => new mongoose.Types.ObjectId(), // Automatically generate a new ObjectId
     },
@@ -157,6 +157,7 @@ businessOwnerSchema.methods.toUserResponse = function() {
         cancellationPolicy: this.cancellationPolicy,
         website: this.website,
         socialMediaLinks: this.socialMediaLinks,
+        _id: this._id
     };
 };
 
