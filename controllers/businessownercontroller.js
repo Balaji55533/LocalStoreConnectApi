@@ -173,7 +173,7 @@ const uploadUserFile = asyncHandler(async (req, res) => {
         const key = `user-files/${userId}-${Date.now()}.${fileExtension}`;
         
         const params = {
-            Bucket: process.env.AWS_BUCKET_NAME,
+            Bucket: "localstoreconnect",
             Key: key,
             Body: fileContent,
             ContentType: file.mimetype,
