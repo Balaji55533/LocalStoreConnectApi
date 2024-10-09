@@ -156,7 +156,6 @@ const uploadUserFile = asyncHandler(async (req, res) => {
     const file = req.file;
     // Check if userId and file are present
     if (!userId || !file) {
-        console.log("Missing userId or file");
         return res.status(400).json({ message: "User ID and file are required." });
     }
 
