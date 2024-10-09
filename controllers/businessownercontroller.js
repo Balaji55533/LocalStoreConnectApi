@@ -8,10 +8,15 @@ const AWS = require('aws-sdk');
 const userCache = new NodeCache({ stdTTL: 600 });
 const multer = require('multer');
 
+
+AWS.config.credentials = new AWS.CredentialProviderChain([
+    function () { return new AWS.EnvironmentCredentials('AWS'); },
+    function () { return new AWS.SharedIniFileCredentials(); }
+  ]);
 AWS.config.update({
     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-    region: process.env.AWS_REGION
+    region: 'ap-south-1'
 });
 
 const s3 = new AWS.S3({
@@ -164,6 +169,18 @@ const uploadUserFile = asyncHandler(async (req, res) => {
     // Check if userId and file are present
     if (!userId || !file) {
         return res.status(400).json({ message: "User ID and file are required." });
+    }
+
+    try {
+        const credentials = await AWS.config.credentials.getPromise();
+        console.log("AWS Credentials loaded successfully");
+        console.log("AWS Region:", AWS.config.region);
+    } catch (credError) {
+        console.error("Error loading AWS credentials:", credError);
+        return res.status(500).json({ 
+            message: "Failed to load AWS credentials",
+            error: credError.message
+        });
     }
 
     try {
