@@ -7,11 +7,18 @@ const AWS = require('aws-sdk');
 // Create a cache instance with a default TTL of 10 minutes
 const userCache = new NodeCache({ stdTTL: 600 });
 const multer = require('multer');
-const s3 = new AWS.S3({
+
+AWS.config.update({
     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-    region: "ap-south-1",
+    region: process.env.AWS_REGION
 });
+
+const s3 = new AWS.S3({
+    apiVersion: '2006-03-01',
+    signatureVersion: 'v4'
+});
+
 
 const registerBusinessOwner = asyncHandler(async (req, res) => {
     const { user } = req.body;
