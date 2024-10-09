@@ -9,10 +9,14 @@ const userCache = new NodeCache({ stdTTL: 600 });
 const multer = require('multer');
 
 
-AWS.config.credentials = new AWS.CredentialProviderChain([
-    function () { return new AWS.EnvironmentCredentials('AWS'); },
-    function () { return new AWS.SharedIniFileCredentials(); }
-  ]);
+function checkAWSCredentials() {
+    if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
+        throw new Error('AWS credentials are not set in environment variables');
+    }
+}
+
+// Check credentials before configuring AWS
+checkAWSCredentials();
 AWS.config.update({
     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
