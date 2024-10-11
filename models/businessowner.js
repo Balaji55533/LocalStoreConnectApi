@@ -2,18 +2,56 @@ const mongoose = require('mongoose');
 const uniqueValidator = require('mongoose-unique-validator');
 const jwt = require("jsonwebtoken");
 
+// Sub-schema for City
+const citySchema = new mongoose.Schema({
+    name: {
+        type: String,
+        required: true
+    },
+    code: {
+        type: String, // Optional code (e.g., postal code or state code)
+        default: ""
+    }
+}, { _id: false }); // Disable _id generation for sub-documents
+
+// Sub-schema for State
+const stateSchema = new mongoose.Schema({
+    name: {
+        type: String,
+        required: true
+    },
+    code: {
+        type: String, // Optional state code
+        default: ""
+    }
+}, { _id: false });
+
+// Sub-schema for Country
+const countrySchema = new mongoose.Schema({
+    name: {
+        type: String,
+        required: true
+    },
+    code: {
+        type: String, // Optional country code (ISO)
+        default: ""
+    }
+}, { _id: false });
+
+// Business Type Schema
 const businessTypeSchema = new mongoose.Schema({
     id: { 
-        type: mongoose.Schema.Types.ObjectId, // Unique identifier
-        default: () => new mongoose.Types.ObjectId(), // Automatically generate a new ObjectId
+        type: mongoose.Schema.Types.ObjectId, 
+        default: () => new mongoose.Types.ObjectId(),
     },
     type: {
         type: String,
         required: true,
-        enum: ['restaurant', 'retail', 'service', 'other'], // Add other types as necessary
+        enum: ['restaurant', 'retail', 'service', 'other'], 
     },
 }, { _id: false });
 
+// Business Owner Schema
 const businessOwnerSchema = new mongoose.Schema({
     username: {    
         type: String, 
@@ -31,18 +69,17 @@ const businessOwnerSchema = new mongoose.Schema({
         match: [/\S+@\S+\.\S+/, 'is invalid'],
         index: true,
         required: function() {
-            return !this.phoneNumber;  // If email is not provided, phoneNumber is required
+            return !this.phoneNumber;  
         }
     },
     phoneNumber: {
         type: String,
         unique: true,
-        match: [/^[0-9]{10}$/, 'is invalid'],  // Assuming a 10-digit phone number
+        match: [/^[0-9]{10}$/, 'is invalid'],
         required: function() {
-            return !this.email;  // If phoneNumber is not provided, email is required
+            return !this.email;  
         }
     },
-    // New Fields
     businessName: {
         type: String,
         required: true
@@ -57,11 +94,11 @@ const businessOwnerSchema = new mongoose.Schema({
         default: ""
     },
     city: {
-        type: String,
+        type: citySchema, // Use the citySchema
         required: true
     },
     state: {
-        type: String,
+        type: stateSchema, // Use the stateSchema
         required: true
     },
     zipCode: {
@@ -69,20 +106,20 @@ const businessOwnerSchema = new mongoose.Schema({
         required: true
     },
     country: {
-        type: String,
+        type: countrySchema, // Use the countrySchema
         required: true
     },
     openingTime: {
         type: String,
-        required: true // Assuming this will be stored as a string, e.g., '09:00 AM'
+        required: true 
     },
     closingTime: {
         type: String,
-        required: true // Assuming this will be stored as a string, e.g., '09:00 PM'
+        required: true 
     },
     bookingDuration: {
         type: Number,
-        required: true // Duration in minutes
+        required: true 
     },
     maxBookings: {
         type: Number,
@@ -97,7 +134,7 @@ const businessOwnerSchema = new mongoose.Schema({
         default: ""
     },
     socialMediaLinks: {
-        type: [String], // Array of strings for multiple links
+        type: [String], 
         default: []
     },
     profilePicture: {

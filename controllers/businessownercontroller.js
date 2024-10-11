@@ -56,10 +56,25 @@ const registerBusinessOwner = asyncHandler(async (req, res) => {
                 } 
             },
             ...user.description && { description: user.description },
-            ...user.city && { city: user.city },
-            ...user.state && { state: user.state },
+            ...user.city && {
+                city: {
+                    name: user.city.name,
+                    zipCode: user.city.zipCode // if you want to include zipCode as part of city
+                }
+            },
+            ...user.state && {
+                state: {
+                    name: user.state.name,
+                    code: user.state.code // you can include a state code if required
+                }
+            },
+            ...user.country && {
+                country: {
+                    name: user.country.name,
+                    code: user.country.code // you can include a country code if required
+                }
+            },
             ...user.zipCode && { zipCode: user.zipCode },
-            ...user.country && { country: user.country },
             ...user.openingTime && { openingTime: user.openingTime },
             ...user.closingTime && { closingTime: user.closingTime },
             ...user.bookingDuration && { bookingDuration: user.bookingDuration },
@@ -68,6 +83,7 @@ const registerBusinessOwner = asyncHandler(async (req, res) => {
             ...user.website && { website: user.website },
             ...user.socialMediaLinks && { socialMediaLinks: user.socialMediaLinks },
         };
+        
 
      
  
