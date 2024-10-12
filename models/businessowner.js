@@ -44,11 +44,15 @@ const businessTypeSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId, 
         default: () => new mongoose.Types.ObjectId(),
     },
-    type: {
+    name: {
         type: String,
         required: true,
         enum: ['restaurant', 'retail', 'service', 'other'], 
     },
+    code: {
+        type: String, // Optional country code (ISO)
+        default: ""
+    }
 }, { _id: false });
 
 // Business Owner Schema
