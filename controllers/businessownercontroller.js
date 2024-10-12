@@ -52,7 +52,8 @@ const registerBusinessOwner = asyncHandler(async (req, res) => {
             ...user.businessName && { businessName: user.businessName },
             ...user.businessType && { 
                 businessType: { 
-                    type: user.businessType.type,
+                    name: user.businessType.name,
+                    code: user.businessType.code,
                 } 
             },
             ...user.description && { description: user.description },
