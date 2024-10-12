@@ -47,7 +47,6 @@ const businessTypeSchema = new mongoose.Schema({
     name: {
         type: String,
         required: true,
-        enum: ['restaurant', 'retail', 'service', 'other'], 
     },
     code: {
         type: String, // Optional country code (ISO)
