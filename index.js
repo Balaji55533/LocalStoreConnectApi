@@ -13,6 +13,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api', require('./routes/useroute')); 
 app.use('/api', require('./routes/businessownerroute'));
 app.use('/api', require('./routes/category'));
+app.use('/api', require('./routes/postroute'));
+
 app.use('/.netlify/function/api',router ); 
 
 app.listen(PORT, () => { console.log(`Listening on port ${PORT}`) });   

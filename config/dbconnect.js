@@ -12,7 +12,7 @@ if (!process.env.DATABASE_URI) {
 const connectToDatabase = async () => { 
   try {
     mongoose.set('strictQuery', false);
-    await mongoose.connect(process.env.DATABASE_URI, {
+    await mongoose.connect("mongodb+srv://balajidevtar:0JyOgsoj7GSjqfmc@serverlessinstance0.bzamshj.mongodb.net/LocalShopConnectApi?retryWrites=true&w=majority&appName=LocalShopConnectApi", {
       useNewUrlParser: true,
       useUnifiedTopology: true,
       family: 4,
