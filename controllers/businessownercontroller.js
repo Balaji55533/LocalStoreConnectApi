@@ -4,6 +4,8 @@ const bcrypt = require('bcrypt');
 const businessowner = require('../models/businessowner');
 const NodeCache = require("node-cache");
 const AWS = require('aws-sdk');
+const myCache = new NodeCache();
+myCache.flushAll();
 // Create a cache instance with a default TTL of 10 minutes
 const userCache = new NodeCache({ stdTTL: 600 });
 const multer = require('multer');
