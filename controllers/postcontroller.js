@@ -159,14 +159,12 @@ const AddPost = asyncHandler(async (req, res) => {
             return res.status(404).json({ message: "Post not found." });
         }
 
-        console.log("Post updated successfully:", updatedPost);
 
         return res.status(200).json({
             message: "File uploaded and post updated successfully.",
             fileUrl: uploadedFileUrls,
         });
     } catch (error) {
-        console.error('Error uploading file:', error);
         return res.status(500).json({ 
             message: "An error occurred while uploading the file.",
             error: error.message,
@@ -176,9 +174,30 @@ const AddPost = asyncHandler(async (req, res) => {
 });
 
 
+const deletePostData = asyncHandler(async (req, res) => {
+  try {
+     const { postId } = req.body;
+    // Check if a post by this user already exists
+    const posts = await DynamicPostData.findByIdAndDelete(postId);
+
+
+      res.status(201).json({
+        message: 'Post Delete successfully',
+        data: posts,
+      });
+  } catch (error) {
+    res.status(500).json({
+      message: 'Error storing dynamic data',
+      error: error.message,
+    });
+  }
+});
+
   
 module.exports = {
     AddPost,
     getPostData,
-    uploadPostImage
+    uploadPostImage,
+    deletePostData
 }
+  

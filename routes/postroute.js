@@ -21,5 +21,7 @@ const postController = require('../controllers/postcontroller');
 router.post('/post/create',verifyJWT, postController.AddPost );
 router.post('/post',verifyJWT, postController.getPostData );
 router.post('/post/upload-images', verifyJWT,upload.array('file'), postController.uploadPostImage);
+router.post('/post/deletepost', verifyJWT, postController.deletePostData);
+
 
 module.exports = router;  
