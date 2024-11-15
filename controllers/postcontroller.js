@@ -27,7 +27,7 @@ const uploadImageToS3 = async (imageData, filename) => {
 };
 const AddPost = asyncHandler(async (req, res) => {
   try {
-    const { postData, userId } = req.body;
+    const { postData, userId,categoryId } = req.body;
 
     if (!userId || !postData) {
       return res.status(400).json({
@@ -54,8 +54,12 @@ const AddPost = asyncHandler(async (req, res) => {
     
 
     // Save post data in the database
-    let dynamicPostDataEntry = await DynamicPostData.findOne({ createdBy: mongoose.Types.ObjectId(userId) });
+    let dynamicPostDataEntry = await DynamicPostData.findOne({ 
+      createdBy: mongoose.Types.ObjectId(userId), 
+      "postData.categoryId":postData?.categoryId
+    });
 
+    
     if (dynamicPostDataEntry) { 
       // Update existing post
       dynamicPostDataEntry.postData = postData;
@@ -69,12 +73,14 @@ const AddPost = asyncHandler(async (req, res) => {
       // Create a new post entry
       dynamicPostDataEntry = new DynamicPostData({
         createdBy: mongoose.Types.ObjectId(userId),
+        categoryId: mongoose.Types.ObjectId(categoryId),
         postData,
       });
       const savedData = await dynamicPostDataEntry.save();
       res.status(201).json({
         message: "Dynamic data stored successfully",
         data: savedData,
+        success: true
       });
     }
   } catch (error) {
@@ -87,9 +93,10 @@ const AddPost = asyncHandler(async (req, res) => {
 
   const getPostData = asyncHandler(async (req, res) => {
     try {
-     
+     const { filterData } = req.body;
+     console.log("filterData",filterData)
       // Check if a post by this user already exists
-      const posts = await DynamicPostData.find().lean();
+      const posts = await DynamicPostData.find(filterData).lean();
   
   
         res.status(201).json({
@@ -176,18 +183,43 @@ const AddPost = asyncHandler(async (req, res) => {
 
 const deletePostData = asyncHandler(async (req, res) => {
   try {
-     const { postId } = req.body;
-    // Check if a post by this user already exists
-    const posts = await DynamicPostData.findByIdAndDelete(postId);
+    const { postId } = req.body;
 
+    // Fetch the document to get S3 file keys (assuming you have stored the keys)
+    const posts = await DynamicPostData.find({ _id: postId }).lean();
 
-      res.status(201).json({
-        message: 'Post Delete successfully',
-        data: posts,
+    if (posts.length > 0) {
+      // Collect S3 keys for deletion (assuming each post has image keys stored in an array `s3Keys`)
+      const s3KeysToDelete = posts.flatMap(post => post.s3Keys || []);
+
+      // Delete files from S3 bucket
+      if (s3KeysToDelete.length > 0) {
+        const deleteParams = {
+          Bucket: "localstoreconnect",
+          Delete: {
+            Objects: s3KeysToDelete.map(key => ({ Key: key })),
+            Quiet: false,
+          },
+        };
+
+        await s3.deleteObjects(deleteParams).promise();
+      }
+
+      // Delete the database entry
+      await DynamicPostData.deleteMany({ _id: postId });
+
+      res.status(200).json({
+        message: 'Post and associated S3 images deleted successfully',
+        deletedCount: posts.length,
       });
+    } else {
+      res.status(404).json({
+        message: 'No post found with the specified ID',
+      });
+    }
   } catch (error) {
     res.status(500).json({
-      message: 'Error storing dynamic data',
+      message: 'Error deleting post and S3 images',
       error: error.message,
     });
   }
