@@ -22,6 +22,8 @@ router.post('/post/create',verifyJWT, postController.AddPost );
 router.post('/post',verifyJWT, postController.getPostData );
 router.post('/post/upload-images', verifyJWT,upload.array('file'), postController.uploadPostImage);
 router.post('/post/deletepost', verifyJWT, postController.deletePostData);
+router.get('/post/postdetailbyuserid/:userId', verifyJWT, postController.getPostDetailsBtUserId);
+
 
 
 module.exports = router;  

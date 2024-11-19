@@ -27,7 +27,9 @@ const uploadImageToS3 = async (imageData, filename) => {
 };
 const AddPost = asyncHandler(async (req, res) => {
   try {
-    const { postData, userId,categoryId } = req.body;
+    const { postData, userId,categoryId,isSubmit } = req.body;
+
+    console.log("isSubmit",isSubmit);
 
     if (!userId || !postData) {
       return res.status(400).json({
@@ -56,6 +58,7 @@ const AddPost = asyncHandler(async (req, res) => {
     // Save post data in the database
     let dynamicPostDataEntry = await DynamicPostData.findOne({ 
       createdBy: mongoose.Types.ObjectId(userId), 
+      isSubmit:isSubmit,
       "postData.categoryId":postData?.categoryId
     });
 
@@ -74,6 +77,7 @@ const AddPost = asyncHandler(async (req, res) => {
       dynamicPostDataEntry = new DynamicPostData({
         createdBy: mongoose.Types.ObjectId(userId),
         categoryId: mongoose.Types.ObjectId(categoryId),
+        isSubmit:isSubmit,
         postData,
       });
       const savedData = await dynamicPostDataEntry.save();
@@ -225,11 +229,33 @@ const deletePostData = asyncHandler(async (req, res) => {
   }
 });
 
+
+const getPostDetailsBtUserId = asyncHandler(async (req, res) => {
+  try {
+   const  { userId }  = req.params;
+    // Check if a post by this user already exists
+    const posts = await DynamicPostData.find({createdBy:userId}).lean();
+
+
+      res.status(201).json({
+        message: 'Your Data generated!',
+        data: posts,
+        success:true
+      });
+  } catch (error) {
+    res.status(500).json({
+      message: 'Error storing dynamic data',
+      error: error.message,
+    });
+  }
+});
+
   
 module.exports = {
     AddPost,
     getPostData,
     uploadPostImage,
-    deletePostData
+    deletePostData,
+    getPostDetailsBtUserId
 }
   
