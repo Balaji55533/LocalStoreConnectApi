@@ -20,6 +20,9 @@ const upload = multer({
 
 router.post('/businessowner/resister', businessOwnerController.registerBusinessOwner);
 router.post('/businessowner/login', businessOwnerController.loginBusinessOwner);
+router.get('/businessowner', businessOwnerController.businessOwnerList);
 router.post('/businessowner/upload-file', upload.single('file'), businessOwnerController.uploadUserFile);
+
+
 
 module.exports = router; 

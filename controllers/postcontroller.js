@@ -29,8 +29,6 @@ const AddPost = asyncHandler(async (req, res) => {
   try {
     const { postData, userId,categoryId,isSubmit } = req.body;
 
-    console.log("isSubmit",isSubmit);
-
     if (!userId || !postData) {
       return res.status(400).json({
         message: "User ID and post data are required",
@@ -98,7 +96,6 @@ const AddPost = asyncHandler(async (req, res) => {
   const getPostData = asyncHandler(async (req, res) => {
     try {
      const { filterData } = req.body;
-     console.log("filterData",filterData)
       // Check if a post by this user already exists
       const posts = await DynamicPostData.find(filterData).lean();
   
@@ -214,7 +211,7 @@ const deletePostData = asyncHandler(async (req, res) => {
 
       res.status(200).json({
         message: 'Post and associated S3 images deleted successfully',
-        deletedCount: posts.length,
+        deletedCount: posts,
       });
     } else {
       res.status(404).json({

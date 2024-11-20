@@ -250,10 +250,29 @@ const uploadUserFile = asyncHandler(async (req, res) => {
     }
 });
 
+
+const businessOwnerList = asyncHandler(async (req, res) => {
+    try {
+      // Check if a post by this user already exists
+      const user = await businessowner.find({}).lean();
+  
+        res.status(201).json({
+          message: 'Your Data generated!',
+          data: user,
+          success:true
+        });
+    } catch (error) {
+      res.status(500).json({
+        message: 'Error storing dynamic data',
+        error: error.message,
+      });
+    }
+  });
 module.exports = {
     registerBusinessOwner, 
     loginBusinessOwner,
-    uploadUserFile
+    uploadUserFile,
+    businessOwnerList
     
 }
  
