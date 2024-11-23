@@ -24,6 +24,7 @@ router.post('/post/upload-images', verifyJWT,upload.array('file'), postControlle
 router.post('/post/deletepost', verifyJWT, postController.deletePostData);
 router.get('/post/postdetailbyuserid/:userId', verifyJWT, postController.getPostDetailsBtUserId);
 
-
+ 
 
 module.exports = router;  
+ 

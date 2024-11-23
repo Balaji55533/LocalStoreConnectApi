@@ -5,12 +5,15 @@ const User = require('../models/user');
 const DynamicPostData = require('../models/Addpost');
 const { default: mongoose } = require('mongoose');
 const AWS = require('aws-sdk');
+const cloudinary = require('cloudinary');
 
 const s3 = new AWS.S3({
   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
   secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
   region: 'ap-south-1'
 });
+
+
 const uploadImageToS3 = async (imageData, filename) => {
   const buffer = Buffer.from(imageData.split(',')[1], 'base64'); // Remove base64 prefix
   const params = {
@@ -119,66 +122,59 @@ const AddPost = asyncHandler(async (req, res) => {
     if (!postId || !files) {
         return res.status(400).json({ message: "Post ID and file are required." });
     }
-
-    try {
-        const credentials = await AWS.config.credentials.getPromise();
-        
-    } catch (credError) {
-        return res.status(500).json({ 
-            message: "Failed to load AWS credentials",
-            error: credError.message
-        });
-    }
-
     const uploadedFileUrls = [];
-
+    cloudinary.config({
+      cloud_name:"dxmw5ftsc", // Replace with your Cloudinary Cloud Name
+      api_key: "434511147799427",       // Replace with your API Key
+      api_secret: "vEVqtYsLIu_zfGumDy7x5QOKfec", // Replace with your API Secret
+    });
     try {
-        // Prepare file for upload
-        for (const file of files) {
-            const fileContent = file.buffer;
-            const fileExtension = file.originalname.split('.').pop();
-            const key = `post-files/${postId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${fileExtension}`;
+      // Iterate through each file and upload to Cloudinary
+      for (const file of files) {
+          const fileContent = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
 
-            const params = {
-                Bucket: "localstoreconnect",
-                Key: key,
-                Body: fileContent,
-                ContentType: file.mimetype,
-                ACL: 'public-read',
-            };
-
-            // Upload each file to S3
-            const s3Response = await s3.upload(params).promise();
-            uploadedFileUrls.push(s3Response.Location); // Store the URL
-        }
-
-        // Update the post with the file URL using findByIdAndUpdate
-        const updatedPost = await DynamicPostData.findByIdAndUpdate(
-            postId,
+          const uploadResponse = await cloudinary.v2.uploader.upload(
+            fileContent,
             {
-                $set: {
-                    "postData.postImage": uploadedFileUrls,  // Set the new postImage field
-                },
-            },
-            { new: true }  // Return the updated document after the update
-        );
+              folder: "post-files", // Optional folder structure on Cloudinary
+              width: 150,
+              crop: "scale",
+            }
+          );
 
-        if (!updatedPost) {
-            return res.status(404).json({ message: "Post not found." });
-        }
+          console.log('Cloudinary upload response:', uploadResponse);
+          // Store the uploaded URL
+          uploadedFileUrls.push(uploadResponse.secure_url);
+      }
 
+      // Update the post with the file URLs
+      const updatedPost = await DynamicPostData.findByIdAndUpdate(
+          postId,
+          {
+              $set: {
+                  "postData.postImage": uploadedFileUrls, // Update the postImage field with the Cloudinary URLs
+              },
+          },
+          { new: true } // Return the updated document
+      );
 
-        return res.status(200).json({
-            message: "File uploaded and post updated successfully.",
-            fileUrl: uploadedFileUrls,
-        });
-    } catch (error) {
-        return res.status(500).json({ 
-            message: "An error occurred while uploading the file.",
-            error: error.message,
-            stack: error.stack
-        });
-    }
+      if (!updatedPost) {
+          return res.status(404).json({ message: "Post not found." });
+      }
+
+      // Respond with success
+      return res.status(200).json({
+          message: "Files uploaded to Cloudinary and post updated successfully.",
+          fileUrls: uploadedFileUrls,
+      });
+  } catch (error) {
+      // Handle errors
+      return res.status(500).json({
+          message: "An error occurred while uploading files to Cloudinary.",
+          error: error,
+          stack: error.stack,
+      });
+  }
 });
 
 
