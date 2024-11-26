@@ -11,6 +11,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api', require('./routes/useroute')); 
 app.use('/api', require('./routes/businessownerroute'));
 app.use('/api', require('./routes/category'));
+app.use('/api', require('./routes/subcategory'));
 app.use('/api', require('./routes/postroute'));
 
 
