@@ -142,7 +142,6 @@ const AddPost = asyncHandler(async (req, res) => {
             }
           );
 
-          console.log('Cloudinary upload response:', uploadResponse);
           // Store the uploaded URL
           uploadedFileUrls.push(uploadResponse.secure_url);
       }
@@ -243,12 +242,33 @@ const getPostDetailsBtUserId = asyncHandler(async (req, res) => {
   }
 });
 
+const getPostDetailsByPostId = asyncHandler(async (req, res) => {
+  try {
+   const  { postId }  = req.params;
+    // Check if a post by this user already exists
+    const posts = await DynamicPostData.find({_id:postId}).lean();
+
+
+      res.status(201).json({
+        message: 'Your Data generated!',
+        data: posts,
+        success:true
+      });
+  } catch (error) {
+    res.status(500).json({
+      message: 'Error storing dynamic data',
+      error: error.message,
+    });
+  }
+});
+
   
 module.exports = {
     AddPost,
     getPostData,
     uploadPostImage,
     deletePostData,
-    getPostDetailsBtUserId
+    getPostDetailsBtUserId,
+    getPostDetailsByPostId
 }
   

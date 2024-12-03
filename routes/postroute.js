@@ -23,6 +23,8 @@ router.post('/post',verifyJWT, postController.getPostData );
 router.post('/post/upload-images', verifyJWT,upload.array('file'), postController.uploadPostImage);
 router.post('/post/deletepost', verifyJWT, postController.deletePostData);
 router.get('/post/postdetailbyuserid/:userId', verifyJWT, postController.getPostDetailsBtUserId);
+router.get('/post/postdetailbypostid/:postId', verifyJWT, postController.getPostDetailsByPostId);
+
 
  
 
