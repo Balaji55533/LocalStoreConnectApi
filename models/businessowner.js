@@ -152,6 +152,7 @@ const businessOwnerSchema = new mongoose.Schema({
         type: String,
         default: ""
     },
+  s3Keys: { type: [String], default: [] }, 
 }, {
     timestamps: true
 });

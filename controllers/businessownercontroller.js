@@ -2,12 +2,8 @@
 const asyncHandler = require('express-async-handler');
 const bcrypt = require('bcrypt');
 const businessowner = require('../models/businessowner');
-const NodeCache = require("node-cache");
 const AWS = require('aws-sdk');
-const myCache = new NodeCache();
-myCache.flushAll();
 // Create a cache instance with a default TTL of 10 minutes
-const userCache = new NodeCache({ stdTTL: 600 });
 const multer = require('multer');
 
 
@@ -140,30 +136,18 @@ const loginBusinessOwner = asyncHandler(async (req, res) => {
     }
 
     try {
-        // Check the cache for the user
-        const cachedUser = userCache.get(usernameOrEmailOrPhone);
-        
-        // If the user is in the cache, use it
-        let user;
-        if (cachedUser) {
-            user = cachedUser;
-        } else {
-            // Find the user by username, email, or phone number
-            user = await businessowner.findOne({
-                $or: [
-                    { username: usernameOrEmailOrPhone },
-                    { email: usernameOrEmailOrPhone },
-                    { phoneNumber: usernameOrEmailOrPhone }
-                ]
-            });
+        // Find the user by username, email, or phone number
+        const user = await businessowner.findOne({
+            $or: [
+                { username: usernameOrEmailOrPhone },
+                { email: usernameOrEmailOrPhone },
+                { phoneNumber: usernameOrEmailOrPhone }
+            ]
+        });
 
-            // Check if the user exists
-            if (!user) {
-                return res.status(401).json({ message: "Invalid credentials" });
-            }
-
-            // Cache the user for future requests (Mongoose document)
-            userCache.set(usernameOrEmailOrPhone, user);
+        // Check if the user exists
+        if (!user) {
+            return res.status(401).json({ message: "Invalid credentials" });
         }
 
         // Validate the password
@@ -185,6 +169,7 @@ const loginBusinessOwner = asyncHandler(async (req, res) => {
         res.status(500).json({ message: "An error occurred during login" });
     }
 });
+
 
 const uploadUserFile = asyncHandler(async (req, res) => {
     const { userId } = req.body;
@@ -213,7 +198,6 @@ const uploadUserFile = asyncHandler(async (req, res) => {
             console.log("User not found:", userId);
             return res.status(404).json({ message: "User not found." });
         }
-
         // Prepare file for upload
         const fileContent = file.buffer;
         const fileExtension = file.originalname.split('.').pop();
@@ -226,14 +210,12 @@ const uploadUserFile = asyncHandler(async (req, res) => {
             ContentType: file.mimetype,
             ACL: 'public-read', 
         };
-
-       
-
         // Upload to S3
         const s3Response = await s3.upload(params).promise();
 
         // Update the user with the file URL
         user.profilePicture = s3Response.Location;
+        user.s3Keys = s3Response.s3Keys;
         await user.save();
 
         return res.status(200).json({

@@ -81,7 +81,7 @@ const AddPost = asyncHandler(async (req, res) => {
         isSubmit:isSubmit,
         postData,
       });
-      const savedData = await dynamicPostDataEntry.save();
+      const savedData = await dynamicPostDataEntry.save(); 
       res.status(201).json({
         message: "Dynamic data stored successfully",
         data: savedData,

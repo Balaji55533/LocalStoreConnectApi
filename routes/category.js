@@ -8,4 +8,6 @@ const upload = multer({ dest: 'uploads/' });
 
 router.post('/category/create', upload.single('iconUrl'),categoryController.uploadCategory );
 router.get('/category', categoryController.getCategory );
+router.delete('/category/delete', categoryController.deleteCategory );
+
 module.exports = router;  

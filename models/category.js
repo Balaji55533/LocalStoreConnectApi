@@ -15,6 +15,7 @@ const CategorySchema = new mongoose.Schema({
   neams: {
     type: String,
   },
+  s3Keys: { type: [String], default: [] }, 
 }, { _id: false }); // Disable default _id as we are using our custom ID
 
 // Apply auto-increment plugin to the schema
