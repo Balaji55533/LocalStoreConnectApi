@@ -33,6 +33,7 @@ const categoryController = {
         Key: `categoryicons/${file.originalname}`,
         Body: fileContent,
         ContentType: file.mimetype,
+        ACL: 'public-read', 
       };
 
       // Upload the file to S3
@@ -111,6 +112,57 @@ const categoryController = {
         message: 'Error deleting post and S3 images',
         error: error.message,
       });
+    }
+  },
+
+   updateCategory: async (req, res) => {
+    try {
+      const { categoryId, name, neams } = req.body;
+      const file = req.file;
+  
+      // Check if the category exists
+      const category = await Category.findById(categoryId);
+      if (!category) {
+        return res.status(404).json({ message: 'Category not found.' });
+      }
+  
+      // Handle file upload to S3 if a new file is provided
+      let s3UploadResult;
+      if (file) {
+        // Read the uploaded file
+        const fileContent = fs.readFileSync(file.path);
+  
+        // Set up S3 upload parameters
+        const params = {
+          Bucket: process.env.AWS_BUCKET_NAME,
+          Key: `categoryicons/${file.originalname}`,
+          Body: fileContent,
+          ContentType: file.mimetype,
+          ACL: 'public-read',
+        };
+  
+        // Upload the file to S3
+        s3UploadResult = await s3.upload(params).promise();
+  
+        // Clean up the uploaded file from the local server
+        fs.unlinkSync(file.path);
+  
+        // Update the category with the new icon URL and s3Key
+        category.icon = s3UploadResult.Location;
+        category.s3Keys = [s3UploadResult.Key];
+      }
+  
+      // Update other category fields (e.g., name, neams)
+      if (name) category.name = name;
+      if (neams) category.neams = neams;
+  
+      // Save the updated category
+      await category.save();
+  
+      res.status(200).json({ message: 'Category updated successfully!', data: category });
+    } catch (error) {
+      console.error('Error updating category:', error);
+      res.status(500).json({ message: 'An error occurred while updating the category.' });
     }
   }
 };
