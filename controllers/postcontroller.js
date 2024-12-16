@@ -14,69 +14,141 @@ const s3 = new AWS.S3({
 });
 
 
+// const uploadPostImage = asyncHandler(async (req, res) => {
+//   const { postId } = req.body;
+//   const files = req.files;
+
+//   // Check if postId and file are present
+//   if (!postId || !files) {
+//     return res.status(400).json({ message: "Post ID and files are required." });
+//   }
+
+//   const uploadedFileUrls = [];
+//   const s3Keys = []; // Array to store object keys
+
+//   try {
+//     // Iterate through each file and upload to S3
+//     for (const file of files) {
+//       const objectKey = `post-files/${Date.now()}-${file.originalname}`; // Unique file key
+
+//       const uploadParams = {
+//         Bucket: process.env.AWS_BUCKET_NAME, // Replace with your S3 bucket name
+//         Key: objectKey,
+//         Body: file.buffer,
+//         ContentType: file.mimetype,
+//         ACL: 'public-read', // Make file publicly readable (optional)
+//       };
+
+//       // Upload to S3
+//       const uploadResponse = await s3.upload(uploadParams).promise();
+
+//       // Store the uploaded URL and key
+//       uploadedFileUrls.push(uploadResponse.Location);
+//       s3Keys.push(objectKey); // Add only the S3 object key
+//     }
+
+//     // Update the post with the file URLs and S3 keys
+//     const updatedPost = await  DynamicPostData.updateOne(
+//       { _id: postId }, // Find the document by its ID
+//       {
+//         $set: {
+//           "postData.postImage": uploadedFileUrls, 
+//           "s3Keys": s3Keys,
+//         },
+//       }
+//     );
+
+
+//     if (!updatedPost) {
+//       return res.status(404).json({ message: "Post not found." });
+//     }
+
+//     // Respond with success
+//     return res.status(200).json({
+//       message: "Files uploaded to S3 and post updated successfully.",
+//       fileUrls: uploadedFileUrls,
+//       s3Keys: s3Keys, // Include keys in the response for debugging or reference
+//     });
+//   } catch (error) {
+//     // Handle errors
+//     console.error("Error uploading files to S3:", error);
+//     return res.status(500).json({
+//       message: "An error occurred while uploading files to S3.",
+//       error: error.message,
+//     });
+//   }
+// });
+
 const uploadPostImage = asyncHandler(async (req, res) => {
   const { postId } = req.body;
   const files = req.files;
-
   // Check if postId and file are present
   if (!postId || !files) {
-    return res.status(400).json({ message: "Post ID and files are required." });
+      return res.status(400).json({ message: "Post ID and file are required." });
+  }
+
+  try {
+      const credentials = await AWS.config.credentials.getPromise();
+      
+  } catch (credError) {
+      return res.status(500).json({ 
+          message: "Failed to load AWS credentials",
+          error: credError.message
+      });
   }
 
   const uploadedFileUrls = [];
-  const s3Keys = []; // Array to store object keys
-
+  const s3Keys = [];
   try {
-    // Iterate through each file and upload to S3
-    for (const file of files) {
-      const objectKey = `post-files/${Date.now()}-${file.originalname}`; // Unique file key
+      // Prepare file for upload
+      for (const file of files) {
+          const fileContent = file.buffer;
+          const fileExtension = file.originalname.split('.').pop();
+          const key = `post-files/${postId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${fileExtension}`;
 
-      const uploadParams = {
-        Bucket: process.env.AWS_BUCKET_NAME, // Replace with your S3 bucket name
-        Key: objectKey,
-        Body: file.buffer,
-        ContentType: file.mimetype,
-        ACL: 'public-read', // Make file publicly readable (optional)
-      };
+          const params = {
+              Bucket: process.env.AWS_BUCKET_NAME,
+              Key: key,
+              Body: fileContent,
+              ContentType: file.mimetype,
+              ACL: 'public-read',
+          };
 
-      // Upload to S3
-      const uploadResponse = await s3.upload(uploadParams).promise();
+          // Upload each file to S3
+          const s3Response = await s3.upload(params).promise();
+          uploadedFileUrls.push(s3Response.Location); // Store the URL
+          s3Keys.push(key);
+      }
 
-      // Store the uploaded URL and key
-      uploadedFileUrls.push(uploadResponse.Location);
-      s3Keys.push(objectKey); // Add only the S3 object key
-    }
+      // Update the post with the file URL using findByIdAndUpdate
+      const updatedPost = await DynamicPostData.findByIdAndUpdate(
+          postId,
+          {
+              $set: {
+                  "postData.postImage": uploadedFileUrls,  // Set the new postImage field
+                  "postData.s3Keys": s3Keys,
+              },
+          },
+          { new: true }  // Return the updated document after the update
+      );
 
-    // Update the post with the file URLs and S3 keys
-    const updatedPost = await DynamicPostData.findByIdAndUpdate(
-      postId,
-      {
-        $set: {
-          "postData.postImage": uploadedFileUrls, // Update the postImage field with the S3 URLs
-          "s3Keys": s3Keys, // Save only the S3 object keys
-        },
-      },
-      { new: true } // Return the updated document
-    );
+      console.log("updatedPost",updatedPost)
+      if (!updatedPost) {
+          return res.status(404).json({ message: "Post not found." });
+      }
 
 
-    if (!updatedPost) {
-      return res.status(404).json({ message: "Post not found." });
-    }
-
-    // Respond with success
-    return res.status(200).json({
-      message: "Files uploaded to S3 and post updated successfully.",
-      fileUrls: uploadedFileUrls,
-      s3Keys: s3Keys, // Include keys in the response for debugging or reference
-    });
+      return res.status(200).json({
+          message: "File uploaded and post updated successfully.",
+          fileUrl: uploadedFileUrls,
+      });
   } catch (error) {
-    // Handle errors
-    console.error("Error uploading files to S3:", error);
-    return res.status(500).json({
-      message: "An error occurred while uploading files to S3.",
-      error: error.message,
-    });
+      console.error('Error uploading file:', error);
+      return res.status(500).json({ 
+          message: "An error occurred while uploading the file.",
+          error: error.message,
+          stack: error.stack
+      });
   }
 });
 
@@ -109,31 +181,38 @@ const AddPost = asyncHandler(async (req, res) => {
       createdBy: mongoose.Types.ObjectId(userId),
       "postData.category._id": postData?.category?._id,
     });
+    
     if (dynamicPostDataEntry) { 
       // Update existing post
-      dynamicPostDataEntry.postData = postData;
+      dynamicPostDataEntry.postData = {
+        ...dynamicPostDataEntry.postData, // Retain existing fields like postImage and s3Keys
+        ...postData, // Overwrite with new fields from postData
+      };
       dynamicPostDataEntry.isSubmit = isSubmit;
+      
       const updatedData = await dynamicPostDataEntry.save();
       res.status(200).json({
         message: "Dynamic data updated successfully",
         data: updatedData,
-        success: true
+        success: true,
       });
     } else {
-      // Create a new post entry  
+      // Create a new post entry
       dynamicPostDataEntry = new DynamicPostData({
         createdBy: mongoose.Types.ObjectId(userId),
         category: mongoose.Types.ObjectId(category),
-        isSubmit:isSubmit,
+        isSubmit: isSubmit,
         postData,
       });
+    
       const savedData = await dynamicPostDataEntry.save(); 
       res.status(201).json({
         message: "Dynamic data stored successfully",
         data: savedData,
-        success: true
+        success: true,
       });
     }
+    
   } catch (error) {
     res.status(500).json({
       message: "Error storing dynamic data",
@@ -173,7 +252,7 @@ const AddPost = asyncHandler(async (req, res) => {
   
       if (posts.length > 0) {
         // Collect S3 keys for deletion (assuming each post has image keys stored in `s3Keys`)
-        const s3KeysToDelete = posts.flatMap(post => post.s3Keys || []);
+        const s3KeysToDelete = posts.flatMap(post => post.postData.s3Keys || []);
   
   
         // Delete files from S3 bucket

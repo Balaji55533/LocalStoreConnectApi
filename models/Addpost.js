@@ -6,7 +6,6 @@ const AddPost = new mongoose.Schema({
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   createdAt: { type: Date, default: Date.now },
   isSubmit:{type:Boolean},
-  s3Keys: { type: [String], default: [] }
 });
 
 const DynamicPostData = mongoose.model('postData', AddPost);
