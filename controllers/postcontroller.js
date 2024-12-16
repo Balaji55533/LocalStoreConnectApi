@@ -218,7 +218,7 @@ const AddPost = asyncHandler(async (req, res) => {
       message: "Error storing dynamic data",
       error: error.message,
     });
-  }
+  } 
 });
 
   const getPostData = asyncHandler(async (req, res) => {
