@@ -29,66 +29,24 @@ const s3 = new AWS.S3({
 
 const registerBusinessOwner = asyncHandler(async (req, res) => {
     const { user } = req.body;
-
     // Confirm required data
-    if (!user || !user.username || !user.password) {
+    if (!user || !user.email || !user.phoneNumber) {
         return res.status(400).json({ message: "Username and password are required" });
     }
 
-    try {
-        // Hash password
-        const hashedPwd = await bcrypt.hash(user.password, 10); // salt rounds
+    const otp = "123456"
 
-        // Build user object with optional fields
+    try {
+        const hashedPwd = await bcrypt.hash(otp, 10); // salt rounds
         const userObject = {
-            username: user.username,
-            password: hashedPwd,
+            OTP: hashedPwd,
             ...user.email && { email: user.email },
             ...user.phoneNumber && { phoneNumber: user.phoneNumber },
-            ...user.address && { address: user.address },
-            ...user.gstnNumber && { gstnNumber: user.gstnNumber },
-            ...user.businessName && { businessName: user.businessName },
-            ...user.businessType && { 
-                businessType: { 
-                    name: user.businessType.name,
-                    code: user.businessType.code,
-                } 
-            },
-            ...user.description && { description: user.description },
-            ...user.city && {
-                city: {
-                    name: user.city.name,
-                    zipCode: user.city.zipCode // if you want to include zipCode as part of city
-                }
-            },
-            ...user.state && {
-                state: {
-                    name: user.state.name,
-                    code: user.state.code // you can include a state code if required
-                }
-            },
-            ...user.country && {
-                country: {
-                    name: user.country.name,
-                    code: user.country.code // you can include a country code if required
-                }
-            },
-            ...user.zipCode && { zipCode: user.zipCode },
-            ...user.openingTime && { openingTime: user.openingTime },
-            ...user.closingTime && { closingTime: user.closingTime },
-            ...user.bookingDuration && { bookingDuration: user.bookingDuration },
-            ...user.maxBookings && { maxBookings: user.maxBookings },
-            ...user.cancellationPolicy && { cancellationPolicy: user.cancellationPolicy },
-            ...user.website && { website: user.website },
-            ...user.socialMediaLinks && { socialMediaLinks: user.socialMediaLinks },
         };
-        
 
-     
- 
         // Create user
         const createdUser = await businessowner.create(userObject);
-
+        
         if (createdUser) {
             // Check if createdUser is valid and has the method
             return res.status(201).json({
@@ -98,29 +56,7 @@ const registerBusinessOwner = asyncHandler(async (req, res) => {
         }
 
     } catch (error) {
-        // Handle validation error
-        if (error.name === 'ValidationError') {
-            const errors = Object.keys(error.errors).map(key => ({
-                field: key,
-                message: error.errors[key].message
-            }));
-            return res.status(400).json({
-                message: "Validation errors occurred.",
-                errors
-            });
-        }
-
-        // Handle duplicate key error (MongoError code 11000)
-        if (error.code === 11000) {
-            const duplicateField = Object.keys(error.keyValue).find(key => error.keyValue[key]);
-            const errorMessage = {
-                username: "Username already exists",
-                email: "Email already exists",
-                phoneNumber: "Phone number already exists",
-            }[duplicateField] || "Duplicate key error";
-
-            return res.status(409).json({ message: errorMessage });
-        }
+       console.log("error",error);
 
         // Handle other errors
         return res.status(500).json({ message: "An error occurred during registration", error });

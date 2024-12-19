@@ -12,9 +12,9 @@ if (!process.env.DATABASE_URI) {
 const connectToDatabase = async () => { 
   try {
     mongoose.set('strictQuery', false);
-    await mongoose.connect("mongodb+srv://balajidevtar:0JyOgsoj7GSjqfmc@serverlessinstance0.bzamshj.mongodb.net/LocalShopConnectApi?retryWrites=true&w=majority&appName=LocalShopConnectApi", {
+    await mongoose.connect(process.env.DATABASE_URI, {
       useNewUrlParser: true,
-      useUnifiedTopology: true,
+      useUnifiedTopology: true,  
       family: 4,
       writeConcern: {
         w: 'majority', // Replace 'majority' with your desired write concern mode
