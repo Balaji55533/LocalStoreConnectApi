@@ -5,7 +5,7 @@ const businessowner = require('../models/businessowner');
 const AWS = require('aws-sdk');
 // Create a cache instance with a default TTL of 10 minutes
 const multer = require('multer');
-
+const jwt = require('jsonwebtoken');
 
 function checkAWSCredentials() {
     if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
@@ -29,39 +29,63 @@ const s3 = new AWS.S3({
 
 const registerBusinessOwner = asyncHandler(async (req, res) => {
     const { user } = req.body;
+
     // Confirm required data
     if (!user || !user.email || !user.phoneNumber) {
-        return res.status(400).json({ message: "Username and password are required" });
+        return res.status(400).json({ message: "Email and phone number are required" });
     }
 
-    const otp = "123456"
+    const otp = "123456";
 
     try {
         const hashedPwd = await bcrypt.hash(otp, 10); // salt rounds
-        const userObject = {
-            OTP: hashedPwd,
-            ...user.email && { email: user.email },
-            ...user.phoneNumber && { phoneNumber: user.phoneNumber },
-        };
 
-        // Create user
-        const createdUser = await businessowner.create(userObject);
-        
-        if (createdUser) {
-            // Check if createdUser is valid and has the method
-            return res.status(201).json({
-                user: createdUser.toUserResponse ? createdUser.toUserResponse() : createdUser,
-                message: "User registered successfully."
+        // Check if a user with the provided email or phone number already exists
+        const existingUser = await businessowner.findOne({
+            $or: [
+                { email: user.email },
+                { phoneNumber: user.phoneNumber }
+            ]
+        });
+
+        if (existingUser) {
+            // Update the existing user's OTP and other fields
+            existingUser.OTP = hashedPwd;
+            if (user.email) existingUser.email = user.email;
+            if (user.phoneNumber) existingUser.phoneNumber = user.phoneNumber;
+
+            await existingUser.save();
+
+            return res.status(200).json({
+                user: existingUser.toObject(),
+                message: "User updated successfully.",
+                success: true
             });
+        } else {
+            // Create a new user
+            const userObject = {
+                OTP: hashedPwd,
+                email: user.email,
+                phoneNumber: user.phoneNumber,
+            };
+
+            const createdUser = await businessowner.create(userObject);
+
+            if (createdUser) {
+                return res.status(201).json({
+                    user: createdUser.toObject(),
+                    message: "User registered successfully.",
+                    success: true
+                });
+            }
         }
-
     } catch (error) {
-       console.log("error",error);
-
-        // Handle other errors
+        console.error("Error:", error);
         return res.status(500).json({ message: "An error occurred during registration", error });
     }
 });
+
+
 
 const loginBusinessOwner = asyncHandler(async (req, res) => {
     const { usernameOrEmailOrPhone, password } = req.body;
@@ -103,6 +127,72 @@ const loginBusinessOwner = asyncHandler(async (req, res) => {
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: "An error occurred during login" });
+    }
+});
+
+
+const verifyBusinessOwner = asyncHandler(async (req, res) => {
+    const { email, phoneNumber, otp } = req.body;
+
+    // Confirm required data
+    if (!email && !phoneNumber) {
+        return res.status(400).json({ message: "Email or phone number is required" });
+    }
+
+    if (!otp) {
+        return res.status(400).json({ message: "OTP is required" });
+    }
+
+    try {
+        // Check if user exists by email or phone number
+        let user;
+        if (email) {
+            user = await businessowner.findOne({ email });
+        } else if (phoneNumber) {
+            user = await businessowner.findOne({ phoneNumber });
+        }
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+       
+        // Compare the provided OTP with the stored OTP
+        const isOtpValid = await bcrypt.compare(otp, user.OTP);
+
+        if (!isOtpValid) {
+            return res.status(400).json({ message: "Invalid OTP" });
+        }
+        const token = jwt.sign(
+            {
+                "user": {
+                    "id": user._id,
+                    "email": user.email,
+                    "phoneNumber": user.phoneNumber 
+                } 
+               },
+            process.env.ACCESS_TOKEN_SECRET, // Make sure you have JWT_SECRET in your environment variables
+            { expiresIn: '30d' } // Set the token expiration time as required
+        );
+        
+        // Store the token in the user's database record (optional)
+        user.token = token;
+        await user.save();
+
+        // user.OTP = null;  // Clear the OTP field after it's verified
+        // await user.save();
+
+        return res.status(200).json({
+            message: "OTP verified successfully.",
+            success:true,
+            token:token,
+            user: user.toUserResponse ? user.toUserResponse() : user,
+        });
+    } catch (error) {
+        console.log("error", error);
+
+        // Handle other errors
+        return res.status(500).json({ message: "An error occurred during verification", error });
     }
 });
 
@@ -190,7 +280,8 @@ module.exports = {
     registerBusinessOwner, 
     loginBusinessOwner,
     uploadUserFile,
-    businessOwnerList
+    businessOwnerList,
+    verifyBusinessOwner
     
 }
  
