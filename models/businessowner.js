@@ -27,6 +27,10 @@ const businessOwnerSchema = new mongoose.Schema({
         type: String,
         unique: true,
     },
+    isAdmin: { 
+        type: Boolean,
+        default: true 
+    },
     token: {
         type: String,
     },

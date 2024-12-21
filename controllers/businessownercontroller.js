@@ -58,7 +58,7 @@ const registerBusinessOwner = asyncHandler(async (req, res) => {
 
             return res.status(200).json({
                 user: existingUser.toObject(),
-                message: "User updated successfully.",
+                message: "OTP sent to your registered mobile number",
                 success: true
             });
         } else {
@@ -67,6 +67,7 @@ const registerBusinessOwner = asyncHandler(async (req, res) => {
                 OTP: hashedPwd,
                 email: user.email,
                 phoneNumber: user.phoneNumber,
+                
             };
 
             const createdUser = await businessowner.create(userObject);
@@ -74,7 +75,7 @@ const registerBusinessOwner = asyncHandler(async (req, res) => {
             if (createdUser) {
                 return res.status(201).json({
                     user: createdUser.toObject(),
-                    message: "User registered successfully.",
+                    message: "OTP sent to your registered mobile number",
                     success: true
                 });
             }
